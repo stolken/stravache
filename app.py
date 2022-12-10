@@ -6,13 +6,57 @@ import plotly.express as px
 import pandas as pd
 from stravaio import strava_oauth2, StravaIO
 import json
-import matplotlib as plt
-import seaborn as sns
 import datetime
+import pickle
+import requests
+
+def get_authorisation():
+        oauth_obj = strava_oauth2(client_id='90994', client_secret="ed89e268fddb96e2a7aee3a2e13cbcc757c06283")
+        with open('oauth_obj.pkl', 'wb') as f:
+            pickle.dump(oauth_obj, f)
+
+
+def get_access_token():
+    from pathlib import Path
+    
+    if not Path("oauth_obj.pkl").is_file():
+        get_authorisation()
+
+    with open('oauth_obj.pkl', 'rb') as f:
+        oauth_obj = pickle.load(f)
+
+    if oauth_obj['expires_at'] < datetime.datetime.now().timestamp():
+        #refresh token
+        refresh_access_token(client_id='90994', client_secret="ed89e268fddb96e2a7aee3a2e13cbcc757c06283", refresh_token=oauth_obj['refresh_token'])
+        with open('oauth_obj.pkl', 'rb') as f:
+            oauth_obj = pickle.load(f)
+
+    return oauth_obj["access_token"]
+
+def refresh_access_token(client_id, client_secret,refresh_token):
+    import requests
+    import json
+    url = "https://www.strava.com/api/v3/oauth/token"
+
+    data = {
+    'client_id': client_id,
+    'client_secret': client_secret,
+    'grant_type': 'refresh_token',
+    'refresh_token': refresh_token,
+    }
+
+    response = requests.request("POST", url, data=data)
+    oauth_obj = json.loads(response.text)
+    with open('oauth_obj.pkl', 'wb') as f:
+        pickle.dump(oauth_obj, f)
+
+  
+  
 
 
 def get_client():
-    access_token = "f323415afa8977b09464adacc6d72617a7c58062"
+    access_token =  get_access_token()
+    #access_token = "fbc0ae7380b975ee78812cd645a259741d69a3be"
     client = StravaIO(access_token=access_token)
     return client
 
@@ -20,14 +64,14 @@ def get_client():
 client = get_client()
 
 
-def get_activity_stream_dataframe(athlete_id=94046257, id=8146797672):
+def get_activity_stream_dataframe(athlete_id, id):
     streams = client.get_activity_streams(athlete_id=athlete_id, id=id)
     df = pd.DataFrame(streams.to_dict())
     #act_stream["efficiency"] = act_stream["velocity_smooth"] / act_stream["heartrate"]
     return df
 
 
-def get_activity_heartrate_mean(athlete_id=94046257, id=8146797672):
+def get_activity_heartrate_mean(athlete_id, id):
     get_activity_heartrate_mean = 0
     client = get_client()
     try:
