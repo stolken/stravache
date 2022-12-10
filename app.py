@@ -4,6 +4,7 @@
 from dash import Dash, html, dcc
 import plotly.express as px
 import pandas as pd
+
 from stravaio import strava_oauth2, StravaIO
 import json
 import datetime
