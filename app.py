@@ -11,6 +11,20 @@ import datetime
 import pickle
 import requests
 
+def download_all_activities():
+    client = get_client()
+    athlete = client.get_logged_in_athlete()
+    athlete.store_locally()
+
+    local_athletes = client.local_athletes()
+    local_activities = client.local_activities(athlete_id=athlete.id)
+    list_activities = client.get_logged_in_athlete_activities(after='last week')
+
+    for a in list_activities:
+        activity = client.get_activity_by_id(a.id)
+        activity.store_locally()
+
+
 def get_authorisation():
         oauth_obj = strava_oauth2(client_id='90994', client_secret="ed89e268fddb96e2a7aee3a2e13cbcc757c06283")
         with open('oauth_obj.pkl', 'wb') as f:
@@ -57,7 +71,6 @@ def refresh_access_token(client_id, client_secret,refresh_token):
 
 def get_client():
     access_token =  get_access_token()
-    #access_token = "fbc0ae7380b975ee78812cd645a259741d69a3be"
     client = StravaIO(access_token=access_token)
     return client
 
@@ -68,7 +81,6 @@ client = get_client()
 def get_activity_stream_dataframe(athlete_id, id):
     streams = client.get_activity_streams(athlete_id=athlete_id, id=id)
     df = pd.DataFrame(streams.to_dict())
-    #act_stream["efficiency"] = act_stream["velocity_smooth"] / act_stream["heartrate"]
     return df
 
 
@@ -128,6 +140,8 @@ def get_activities_using_cache():
 
 
 app = Dash(__name__)
+
+download_all_activities()
 
 df = get_activities_using_cache()
 df['start_date_local']= pd.to_datetime(df['start_date_local'])
